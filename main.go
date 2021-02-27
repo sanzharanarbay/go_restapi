@@ -1,127 +1,51 @@
 package main
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+)
 
-type Person struct {
-	Id int
-	Name string
+type Response struct {
+	Name    string
 }
 
-func (p *Person) SetName(name string){
-	p.Name = name
+type Params struct {
+	ID   int
+	User string
 }
 
-type Account struct{
-	Id int
-	Name string
-	Person
-}
+func test(w http.ResponseWriter, r *http.Request){
+	if r.Method != http.MethodPost {
+		response:= Response{"The method is not post"}
+		json,error := json.Marshal(response)
+		if error != nil {
+			http.Error(w, error.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(json)
+	}
 
-type MySlice []int
+	body, err := ioutil.ReadAll(r.Body)
+	defer r.Body.Close()
 
-func (mSl *MySlice) Add(val int)  {
-	*mSl = append(*mSl, val)
-}
+	p := &Params{}
+	err = json.Unmarshal(body, p)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
 
-func (mSl *MySlice) Count() int  {
-	return len(*mSl)
+	fmt.Fprintf(w, "content-type %#v\n",
+		r.Header.Get("Content-Type"))
+	fmt.Fprintf(w, "params %#v\n", p)
+
 }
 
 func main() {
-
-	pers:= Person{1, "Sanzhar"}
-	pers.SetName("Sanzh")
-
-	var account Account = Account{
-		Id: 1,
-		Name: "Dl",
-		Person: Person{
-			Id: 2,
-			Name: "Sanzhar Anarbay",
-		},
-	}
-
-	account.SetName("Ivan Ivanov")
-
-	fmt.Println(account)
-
-	mSl := MySlice([]int{1,2})
-
-	mSl.Add(3)
-
-	fmt.Println(mSl)
-	fmt.Println(mSl.Count())
-
-	var buff []int
-	buff = append(buff, 9, 10)
-	buff = append(buff, 13)
-
-	fmt.Println(buff)
-
-	var user map[string]string = map[string]string{
-		"name":    "Sanzhar",
-		"surname": "Anarbay",
-	}
-
-	if user["name"] == "Sanzhar" {
-		fmt.Println("True")
-	}
-
-	mapValue := map[string]string{"name": "Sanzhar"}
-
-	if keyValue, keyExist := mapValue["name"]; keyExist {
-		fmt.Println(keyValue)
-	}
-
-	if _, keyExist := mapValue["name"]; keyExist {
-		fmt.Println("It works!")
-	}
-
-	number := 1
-
-	if number == 1 {
-		fmt.Println("True ", number)
-	} else if number == 3 {
-		fmt.Println("false")
-	}
-
-	check := "hello"
-	switch check {
-	case "hee":
-		fmt.Println("hee")
-	case "hello":
-		fmt.Println("hello")
-	default:
-		fmt.Println("Default")
-	}
-
-	isRun := true
-	for isRun {
-		fmt.Println("Loop just one condition")
-		isRun = false
-	}
-
-	for indx := range buff {
-		fmt.Println("range by index", indx)
-	}
-
-	for indx, val := range buff {
-		fmt.Println("range by index", indx, val)
-	}
-
-	for key := range user {
-		fmt.Println("Range map by key", key)
-	}
-
-	for key, value := range user {
-		fmt.Println("Range map by key and value here key", key)
-		fmt.Println("Range map by key and value here value", value)
-	}
-
-	for _, value := range user {
-		fmt.Println("Range map by value", value)
-	}
-
-
-
+	http.HandleFunc("/test", test)
+	fmt.Println("starting server at :8080")
+	http.ListenAndServe(":8080", nil)
 }
